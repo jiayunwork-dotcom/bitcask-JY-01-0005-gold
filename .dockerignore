@@ -1,0 +1,9 @@
+.git
+.DS_Store
+docker.log
+docker-test.log
+run.log
+test.log
+build.log
+build2.log
+vet.log
