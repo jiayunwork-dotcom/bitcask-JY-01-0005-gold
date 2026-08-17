@@ -1,7 +1,9 @@
 package log
 
 import (
+	"encoding/binary"
 	"errors"
+	"hash/crc32"
 	"io"
 )
 
@@ -43,6 +45,7 @@ func (rd *Reader) Next() (*Entry, error) {
 		}
 		return nil, err
 	}
+	crc := binary.BigEndian.Uint32(head[0:4])
 	h := decodeHeader(head[4 : 4+headerSize])
 
 	payloadLen := int(h.keyLen) + int(h.valueLen)
@@ -55,6 +58,14 @@ func (rd *Reader) Next() (*Entry, error) {
 			return nil, ErrCorrupt
 		}
 		return nil, err
+	}
+
+	// Recompute the crc32 exactly as Encode did: header bytes + payload.
+	crcBody := make([]byte, 0, len(head[4:4+headerSize])+len(body))
+	crcBody = append(crcBody, head[4:4+headerSize]...)
+	crcBody = append(crcBody, body...)
+	if crc32.ChecksumIEEE(crcBody) != crc {
+		return nil, ErrChecksum
 	}
 
 	key := body[:h.keyLen]
